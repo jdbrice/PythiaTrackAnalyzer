@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+
+	<Task name="Pythia Dimuon Analyzer" type="DimuonAnalyzer" config="" nodePath="DMA" />
+	<Logger color="true" globalLogLevel="warning" />
+
+	<DMA>
+		<Logger color="true" globalLogLevel="info" />
+		<EventLoop progress="true" />
+
+		<input>
+			<dst treeName="pythia" url="/Users/danielbrandenburg/bnl/local/data/dilepton/pythia/Pythia.lis" splitBy="100" nEvents="50000" maxFiles="100"/>
+		</input>
+
+		<output path="" >
+			<TFile url="./pythia_dimuon_analysis.root" />
+		</output>
+
+		<histograms>
+			<Histo name="KF"                  title= "KF"                        bins_x= "bins.KF" />
+			<Histo name="KS"                  title= "KS"                        bins_x= "bins.KS" />
+
+			<Histo name="mupParents"          title= "#mu^{+} Parents"           bins_x= "bins.KF" />
+			<Histo name="mumParents"          title= "#mu^{-} Parents"           bins_x= "bins.KF" />
+
+			<Histo name="fg_uls_all"          title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
+			<Histo name="fg_uls_all_2d"       title= "True Pairs (all sources)"  bins_x= "bins.invMass" bins_y="bins.pT" />
+			<Histo name="star_fg_uls_all"     title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
+
+			<Histo name="ls"                  title= "Like-Sign"                 bins_x= "bins.invMass" />
+			<Histo name="lsp"                 title= "Like-Sign Pos"             bins_x= "bins.invMass" />
+			<Histo name="lsn"                 title= "Like-Sign Neg"             bins_x= "bins.invMass" />
+
+			<Histo name="muons"               title= "Muons; # Pos;# Neg"         bins_x="bins.n"        bins_y="bins.n" />
+
+			<Histo name="PionMuonDeltaPhi"    title= ";DeltaPhi( #pi, #mu )"      bins_x="bins.deltaPhi" />
+			<Histo name="PionMuonAbsDeltaPhi" title= ";DeltaPhi( #pi, #mu )"      bins_x="bins.deltaPhi" />
+
+			<Histo name="true_all"            title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
+			<Histo name="true_omega"          title= "True Pairs (omega)"        bins_x= "bins.invMass" />
+			<Histo name="true_rho0"           title= "True Pairs (rho0)"         bins_x= "bins.invMass" />
+			<Histo name="true_phi"            title= "True Pairs (phi)"          bins_x= "bins.invMass" />
+			<Histo name="true_jpsi"           title= "True Pairs (jpsi)"         bins_x= "bins.invMass" />
+			
+			<Histo name="true_eta"            title= "True Pairs (eta)"          bins_x= "bins.invMass" />
+			<Histo name="true_etaprime"       title= "True Pairs (etaprime)"     bins_x= "bins.invMass" />
+
+			<Histo name="true_ls"             title= "True Pairs (ls)"           bins_x= "bins.invMass" />
+		</histograms>
+		
+	</DMA>
+
+	<bins>
+		<KF width="1" min="-500" max="500" />
+		<KS width="1" min="-500" max="500" />
+
+		<invMass width="0.01" min="0.0" max="10.0" />
+		<pT width="0.01" min="0.0" max="10.0" />
+		<n width="1" min="0" max="10" />
+		<deltaPhi width="0.0245" min="-3.24159" max="3.24159" />
+	</bins>
+
+</config>

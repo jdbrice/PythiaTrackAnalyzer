@@ -27,3 +27,11 @@
 *.exe
 *.out
 *.app
+
+\.sconsign\.dblite
+
+*.root
+
+*.pcm
+
+src/PythiaTrack\.cpp

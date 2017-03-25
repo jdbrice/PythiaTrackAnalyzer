@@ -1,0 +1,3 @@
+[submodule "include/Pythia6TreeMaker"]
+	path = include/Pythia6TreeMaker
+	url = git@github.com:jdbrice/Pythia6TreeMaker.git
