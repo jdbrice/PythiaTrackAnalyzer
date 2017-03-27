@@ -4,12 +4,21 @@
 	<Task name="Pythia Dimuon Analyzer" type="DimuonAnalyzer" config="" nodePath="DMA" />
 	<Logger color="true" globalLogLevel="warning" />
 
+	<seed>1</seed>
+	<Ranges>
+		<nPos min="0" />
+		<nNeg min="0" />
+		<nSum min="1" />
+	</Ranges>
+
+
+
 	<DMA>
 		<Logger color="true" globalLogLevel="info" />
 		<EventLoop progress="true" />
 
 		<input>
-			<dst treeName="pythia" url="/Users/danielbrandenburg/bnl/local/data/dilepton/pythia/Pythia.lis" splitBy="100" nEvents="50000" maxFiles="100"/>
+			<dst treeName="pythia" url="/Users/danielbrandenburg/bnl/local/data/dilepton/pythia/Pythia.lis" splitBy="100" nEvents="50000" maxFiles="50"/>
 		</input>
 
 		<output path="" >
@@ -23,6 +32,7 @@
 			<Histo name="mupParents"          title= "#mu^{+} Parents"           bins_x= "bins.KF" />
 			<Histo name="mumParents"          title= "#mu^{-} Parents"           bins_x= "bins.KF" />
 
+			<Histo name="bg_uls_all"          title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
 			<Histo name="fg_uls_all"          title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
 			<Histo name="fg_uls_all_2d"       title= "True Pairs (all sources)"  bins_x= "bins.invMass" bins_y="bins.pT" />
 			<Histo name="star_fg_uls_all"     title= "True Pairs (all sources)"  bins_x= "bins.invMass" />
@@ -32,6 +42,7 @@
 			<Histo name="lsn"                 title= "Like-Sign Neg"             bins_x= "bins.invMass" />
 
 			<Histo name="muons"               title= "Muons; # Pos;# Neg"         bins_x="bins.n"        bins_y="bins.n" />
+			<Histo name="pions"               title= "Pions; # Pos;# Neg"         bins_x="bins.n"        bins_y="bins.n" />
 
 			<Histo name="PionMuonDeltaPhi"    title= ";DeltaPhi( #pi, #mu )"      bins_x="bins.deltaPhi" />
 			<Histo name="PionMuonAbsDeltaPhi" title= ";DeltaPhi( #pi, #mu )"      bins_x="bins.deltaPhi" />
@@ -56,7 +67,7 @@
 
 		<invMass width="0.01" min="0.0" max="10.0" />
 		<pT width="0.01" min="0.0" max="10.0" />
-		<n width="1" min="0" max="10" />
+		<n width="1" min="0" max="100" />
 		<deltaPhi width="0.0245" min="-3.24159" max="3.24159" />
 	</bins>
 

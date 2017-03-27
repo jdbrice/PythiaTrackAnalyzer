@@ -5,7 +5,12 @@
 #include "PythiaTrackReader.h"
 #include "TLorentzVector.h"
 #include "TwoBodyDecayer.h"
+#include "TRandom3.h"
 
+#include "CutCollection.h"
+
+#define LOGURU_IMPLEMENTATION 1
+#include "Pythia6TreeMaker/loguru.h"
 
 class DimuonAnalyzer : public TreeAnalyzer
 {
@@ -16,9 +21,11 @@ protected:
 	vector<PythiaTrack*> decayTwoBody;
 
 
-	
+	CutCollection rcol;
 
 	map<string, int> kfcodes;
+
+	float C_PROB_PION_DECAY = 0.1f;
 
 	class TrackInfo{
 	public:
@@ -71,7 +78,15 @@ public:
 	~DimuonAnalyzer() {}
 
 	virtual void initialize(){
+		LOG_SCOPE_FUNCTION(INFO);
 		TreeAnalyzer::initialize();
+
+		int seed = config.getInt( "seed", 0 );
+		LOG_F( INFO, "gRandom SEED = %d", seed );
+		gRandom = new TRandom3();
+		gRandom->SetSeed( seed );
+
+		C_PROB_PION_DECAY = config.getFloat( "ProbPionDecay", 0.05 );
 
 		ptr.create( chain );
 
@@ -86,13 +101,16 @@ public:
 		kfcodes[ "jpsi" ]     = 443;
 		kfcodes[ "eta" ]      = 221;
 		kfcodes[ "etaprime" ] = 331;
+
+		rcol.init( config, "Ranges" );
+		rcol.report();
 	}
 protected:
 
 	
 
 	virtual void printTrack( PythiaTrack * _trk ){
-		std::cout << "==================================================" << std::endl;
+		std::cout << ">>>==================================================" << std::endl;
 		std::cout << "mId       = "  << _trk-> mId       << std::endl;
 		std::cout << "mEnergy   = "  << _trk-> mEnergy   << std::endl;
 		std::cout << "mKF       = "  << _trk-> mKF       << std::endl;
@@ -107,6 +125,7 @@ protected:
 		std::cout << "mVx       = "  << _trk-> mVx       << std::endl;
 		std::cout << "mVy       = "  << _trk-> mVy       << std::endl;
 		std::cout << "mVz       = "  << _trk-> mVz       << std::endl;
+		std::cout << "<<<==================================================" << std::endl;
 	}
 
 	bool commonParent( TrackInfo ti1, TrackInfo ti2 ){
@@ -131,9 +150,6 @@ protected:
 		ti2.tr = new PythiaTrack();
 		ti2.tr->mParent = _parent->mId + 1;
 
-		// cout << "tbd.lvl1 ( M=" << tbd.lvl1.M() << ", P=(" << tbd.lvl1.Px() << ", " << tbd.lvl1.Py() << ", " << tbd.lvl1.Pz() << " ) )" << endl;
-		// cout << "tbd.lvl2 ( M=" << tbd.lvl2.M() << ", P=(" << tbd.lvl2.Px() << ", " << tbd.lvl2.Py() << ", " << tbd.lvl2.Pz() << " ) )" << endl;
-
 		pos.push_back( ti1 );
 		neg.push_back( ti2 );
 	}
@@ -141,38 +157,19 @@ protected:
 	virtual void makePionDecay( PythiaTrack * _parent, vector<TrackInfo> &col ){
 		if ( nullptr == _parent ) return;
 
-		// TwoBodyDecayer tbd1, tbd2;
-		// TrackInfo ti( _parent );
-		// tbd1.decay( ti.lv, 0.05 );
-		// tbd2.decay( ti.lv, 0.05, 0.05 );
-
-		// cout << "parent.lv ( M=" << ti.lv.M() << ", P=(" << ti.lv.Px() << ", " << ti.lv.Py() << ", " << ti.lv.Pz() << " ) )" << endl;
-		
-		// cout << "tbd1.lvl1 ( M=" << tbd1.lvl1.M() << ", P=" << tbd1.lvl1.P() << "(" << tbd1.lvl1.Px() << ", " << tbd1.lvl1.Py() << ", " << tbd1.lvl1.Pz() << " ) )" << endl;
-		// cout << "tbd1.lvl2 ( M=" << tbd1.lvl2.M() << ", P=" << tbd1.lvl2.P() << "(" << tbd1.lvl2.Px() << ", " << tbd1.lvl2.Py() << ", " << tbd1.lvl2.Pz() << " ) )" << endl;
-
-		// cout << "tbd2.lvl1 ( M=" << tbd2.lvl1.M() << ", P=" << tbd2.lvl1.P() << "(" << tbd2.lvl1.Px() << ", " << tbd2.lvl1.Py() << ", " << tbd2.lvl1.Pz() << " ) )" << endl;
-		// cout << "tbd2.lvl2 ( M=" << tbd2.lvl2.M() << ", P=" << tbd2.lvl2.P() << "(" << tbd2.lvl2.Px() << ", " << tbd2.lvl2.Py() << ", " << tbd2.lvl2.Pz() << " ) )" << endl;
-
 		TwoBodyDecayer tbd;
 		TrackInfo ti( _parent );
 		tbd.decay( ti.lv, 0.105, 0.0 );
 
 		TrackInfo ti1( tbd.lvl1 );
-		// TrackInfo ti2( tbd.lvl2 );
 		
 		ti1.tr = new PythiaTrack();
 		ti1.tr->mParent = _parent->mId + 1;
 
-		// ti2.tr = new PythiaTrack();
-		// ti2.tr->mParent = _parent->mId + 1;
-
 		col.push_back( ti1 );
 
-		// cout << "deltaPhi( pi, muon) = " << ti.lv.DeltaPhi( ti1.lv ) * (180 / 3.1415926) << endl;
 		book->fill( "PionMuonDeltaPhi", ti.lv.DeltaPhi( ti1.lv ) );
 		book->fill( "PionMuonAbsDeltaPhi", abs(ti.lv.DeltaPhi( ti1.lv )) );
-		
 	}
 
 	virtual void findPlcs(){
@@ -180,6 +177,7 @@ protected:
 		pos.clear();
 		neg.clear();
 
+		int nPip=0, nPin=0;
 		int nTracks = ptr.getNTracks();
 		for ( int iTrack = 0; iTrack < nTracks; iTrack++  ){
 			PythiaTrack * pyTr    = ptr.getTrack( iTrack );
@@ -193,9 +191,9 @@ protected:
 			}
 
 			// DECAY
-			if ( kfcodes[ "omega" ] == pyTr->mKF ){
-				makeTwoBodyDecay( pyTr );
-			}
+			// if ( kfcodes[ "omega" ] == pyTr->mKF ){
+			// 	makeTwoBodyDecay( pyTr );
+			// }
 			// if ( kfcodes[ "phi" ] == pyTr->mKF ){
 			// 	makeTwoBodyDecay( pyTr );
 			// }
@@ -204,14 +202,19 @@ protected:
 			// }
 
 			if ( kfcodes[ "pi+" ] == pyTr->mKF ){
-				makePionDecay( pyTr, pos );
+				if ( gRandom->Uniform(0,1.) < C_PROB_PION_DECAY )
+					makePionDecay( pyTr, pos );
+				nPip++;
 			}
 			if ( kfcodes[ "pi-" ] == pyTr->mKF ){
-				makePionDecay( pyTr, neg );
+				if ( gRandom->Uniform(0,1.) < C_PROB_PION_DECAY )
+					makePionDecay( pyTr, neg );
+				nPin++;
 			}
 		}
 
 		book->fill( "muons", pos.size(), neg.size() );
+		book->fill( "pions", nPip, nPin );
 	}
 
 	virtual void ulsPairs(){
@@ -240,7 +243,9 @@ protected:
 
 					book->fill( "true_all", lv.M() );
 				}	// commonParent
-				
+				else { // combinatorial only
+					book->fill( "bg_uls_all", lv.M() );
+				}
 				book->fill( "fg_uls_all", lv.M() );
 
 			} // neg
@@ -282,153 +287,7 @@ protected:
 		if ( pos.size() <= 0 && neg.size() <= 0 ) return false;
 
 		return true;
-
-		// mup.clear();
-		// mum.clear();
-		// decayTwoBody.clear();
-
-		// pairs.clear();
-
-		// int nTracks = ptr.getNTracks();
-		// for ( int iTrack = 0; iTrack < nTracks; iTrack++  ){
-		// 	PythiaTrack * pyTr    = ptr.getTrack( iTrack );
-		// 	PythiaTrack * pyTrPar = ptr.getTrackParent( pyTr );
-
-		// 	book->fill( "KF", pyTr->mKF );
-		// 	book->fill( "KS", pyTr->mKS );
-
-			
-
-		// 	int parentKF = 0;
-		// 	if ( pyTrPar )
-		// 		parentKF = pyTrPar->mKF;
-		// 	if ( kfcodes[ "mu-" ] == pyTr->mKF ){
-		// 		book->fill( "mumParents", parentKF );
-		// 		mum.push_back( pyTr );
-		// 		// printTrack( pyTr );
-		// 	}
-		// 	if ( kfcodes["mu+"] == pyTr->mKF ){
-		// 		book->fill( "mupParents", parentKF );
-		// 		mup.push_back( pyTr );
-		// 		// printTrack( pyTr );
-		// 	}
-
-
-		// 	// TODO add BR
-		// 	if ( kfcodes[ "omega" ] == pyTr->mKF ){
-		// 		printTrack( pyTr );
-		// 		decayTwoBody.push_back( pyTr );
-		// 	}
-
-		// 	if ( kfcodes[ "jpsi" ] == pyTr->mKF ){
-		// 		printTrack( pyTr );
-		// 		decayTwoBody.push_back( pyTr );
-		// 	}
-
-		// } // iTrack
-
-		// if ( mup.size() <= 0 || mum.size() <= 0 ) return false;
-
-		// return true;
 	}
-
-
-	/* makeTruePairs
-	 *
-	 * 1. Make TrackPairs from each true pair
-	 * 2. Make decays for each undecayed parent
-	 * 	a. Add the new plcs to the list of pos/neg for future use
-	 * 3. loop over true pairs to make plots
-	 *
-	 * @return void
-	 */
-	// void makeTruePairs(){
-
-	// 	vector<TLorentzVector> lvp, lvn;
-	// 	vector<int> parentKF;
-
-	// 	int nPos = mup.size();
-	// 	int nNeg = mum.size();
-
-	// 	for ( int iPos = 0; iPos < nPos; iPos++ ){
-	// 		PythiaTrack* posplc = mup[ iPos ];
-	// 		for ( int iNeg = 0; iNeg < nNeg; iNeg++ ){
-	// 			PythiaTrack* negplc = mum[ iNeg ];
-	// 			if ( posplc->mParent != negplc->mParent ) continue;
-
-	// 			PythiaTrack * parent = ptr.getTrackParent( posplc );
-	// 			if ( parent ){
-	// 				TLorentzVector lv1, lv2;
-	// 				lv1.SetXYZM( negplc->mPx, negplc->mPy, negplc->mPz, negplc->mMass );
-	// 				lv2.SetXYZM( posplc->mPx, posplc->mPy, posplc->mPz, posplc->mMass );
-					
-	// 				lvn.push_back( lv1 );
-	// 				lvp.push_back( lv2 );
-	// 				parentKF.push_back( parent->mKF );
-
-	// 				TrackPair tp;
-	// 				tp.lv1 = lv1;
-	// 				tp.lv2 = lv2;
-	// 				tp.tr1 = posplc;
-	// 				tp.tr2 = negplc;
-	// 				tp.parent = parent;
-
-	// 				pairs.push_back( tp );
-
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// DECAY the undecayed parents
-	// 	for ( PythiaTrack * pyTr : decayTwoBody ){
-	// 		TwoBodyDecayer tbd;
-			
-	// 		TLorentzVector lv;
-	// 		lv.SetXYZM( pyTr->mPx, pyTr->mPy, pyTr->mPz, pyTr->mMass );
-
-	// 		tbd.decay( lv, 0.105 );
-	// 		lvp.push_back( tbd.lvl1 ) ;
-	// 		lvn.push_back( tbd.lvl2 ) ;
-	// 		parentKF.push_back( pyTr->mKF );
-
-	// 		TrackPair tp;
-	// 		tp.lv1 = tbd.lvl1;
-	// 		tp.lv2 = tbd.lvl2;
-	// 		tp.tr1 = nullptr;
-	// 		tp.tr2 = nullptr;
-	// 		tp.parent = pyTr;
-	// 		pairs.push_back( tp );
-
-	// 		PythiaTrack * trp = new PythiaTrack();
-
-
-	// 	}
-
-
-	// 	for ( int iPair = 0; iPair < lvp.size(); iPair++ ){
-	// 		int pKF            = parentKF[ iPair ];
-
-	// 		TLorentzVector lv;
-	// 		lv = lvp[ iPair ] + lvn[ iPair ];
-
-	// 		if ( kfcodes[ "rho0" ] == pKF )
-	// 			book->fill( "true_rho0", lv.M() );
-	// 		if ( kfcodes[ "omega" ] == pKF )
-	// 			book->fill( "true_omega", lv.M() );
-	// 		if ( kfcodes[ "phi" ] == pKF )
-	// 			book->fill( "true_phi", lv.M() );
-	// 		if ( kfcodes[ "jpsi" ] == pKF )
-	// 			book->fill( "true_jpsi", lv.M() );
-	// 		if ( kfcodes[ "eta" ] == pKF )
-	// 			book->fill( "true_eta", lv.M() );
-	// 		if ( kfcodes[ "etaprime" ] == pKF )
-	// 			book->fill( "true_etaprime", lv.M() );
-
-	// 		book->fill( "true_all", lv.M() );
-
-	// 	}
-
-	// }
 
 
 	virtual void analyzeEvent(){
@@ -437,58 +296,6 @@ protected:
 		lsPairs();
 
 		return;
-		int nPos = mup.size();
-		int nNeg = mum.size();
-
-
-		// makeTruePairs();
-
-		// // true ls pairs
-		// for ( int iPos = 0; iPos < nPos; iPos++ ){
-		// 	PythiaTrack* posplc1 = mup[ iPos ];
-		// 	for ( int iPos2 = iPos; iPos2 < nPos; iPos2++ ){
-		// 		if ( iPos == iPos2 ) continue;
-		// 		PythiaTrack* posplc2 = mup[ iPos2 ];
-
-		// 		if ( posplc1->mParent != posplc2->mParent ) continue;
-
-		// 		PythiaTrack * parent = ptr.getTrackParent( posplc1 );
-		// 		if ( parent ){
-		// 			TLorentzVector lv;
-		// 			lv.SetPxPyPzE( parent->mPx, parent->mPy, parent->mPz, parent->mEnergy );
-		// 			book->fill( "true_ls", lv.M() );
-		// 		}
-		// 	} // loop iPos2
-		// } // iPos
-
-
-		// foreground uls pairs
-		// for ( int iPos = 0; iPos < nPos; iPos++ ){
-		// 	PythiaTrack* posplc = mup[ iPos ];
-		// 	for ( int iNeg = 0; iNeg < nNeg; iNeg++ ){
-		// 		PythiaTrack* negplc = mum[ iNeg ];
-
-		// 		TLorentzVector lv1, lv2, lv;
-		// 		lv1.SetPxPyPzE( negplc->mPx, negplc->mPy, negplc->mPz, negplc->mEnergy );
-		// 		lv2.SetPxPyPzE( posplc->mPx, posplc->mPy, posplc->mPz, posplc->mEnergy );
-		// 		lv = lv1 + lv2;
-		// 		book->fill( "fg_uls_all", lv.M() );
-		// 		book->fill( "fg_uls_all_2d", lv.M(), lv.Pt() );
-
-		// 		// if ( starAccepts( lv1, lv2 ) ){
-		// 		// 	book->fill( "star_fg_uls_all", lv.M() );					
-		// 		// }
-
-		// 	} // iNeg
-		// } // iPos
-
-
-		for ( TrackPair &tp : pairs ){
-
-		}
-
-
-
 	} // analyze event
 
 };
